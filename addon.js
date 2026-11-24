@@ -128,7 +128,7 @@ builder.defineStreamHandler(({ type, id }) => {
         {
           name: "Legal demo stream",
           title: "Big Buck Bunny • 1080p sample",
-          url: "http://distribution.bbb3d.renderfarming.net/video/mp4/bbb_sunflower_1080p_30fps_normal.mp4",
+          url: "https://upload.wikimedia.org/wikipedia/commons/8/88/Big_Buck_Bunny_alt.webm",
           behaviorHints: {
             notWebReady: false
           }
