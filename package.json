@@ -1,0 +1,15 @@
+{
+  "name": "stremio-all-in-one-legal",
+  "version": "1.0.0",
+  "description": "A legal-free Stremio catalog starter for public-domain media and learning resources.",
+  "main": "addon.js",
+  "scripts": {
+    "start": "node addon.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "stremio-addon-sdk": "^1.6.10"
+  }
+}
