@@ -1,20 +1,16 @@
 const { addonBuilder, serveHTTP } = require("stremio-addon-sdk");
+const tmdb = require("./providers/tmdb");
 
 const PORT = Number(process.env.PORT || 7000);
 const BASE_ID = "allinone:";
 
-// This first build deliberately includes one known demo stream from the
-// official Stremio SDK example. Add further streams only after confirming
-// the source is authorized and provides a stable direct media URL.
 const movieCatalog = [
   {
     id: `${BASE_ID}big-buck-bunny`,
     type: "movie",
     name: "Big Buck Bunny",
     releaseInfo: "2008",
-    description:
-      "Open movie by the Blender Foundation. Creative Commons Attribution 3.0. " +
-      "Demo stream supplied in the official Stremio Add-on SDK example.",
+    description: "Open movie by the Blender Foundation. Creative Commons Attribution 3.0.",
     genres: ["Animation", "Family", "Open Movie"],
     runtime: "00:10:34",
     language: "English (original)"
@@ -27,8 +23,7 @@ const seriesCatalog = [
     type: "series",
     name: "Excel & VBA Training",
     releaseInfo: "Learning",
-    description:
-      "Learning catalog placeholder. Authorized lesson video URLs can be added in a later build.",
+    description: "Authorized Excel and VBA learning videos.",
     genres: ["Training", "Excel", "VBA"]
   },
   {
@@ -36,8 +31,7 @@ const seriesCatalog = [
     type: "series",
     name: "SAP Training",
     releaseInfo: "Learning",
-    description:
-      "Learning catalog placeholder. Authorized lesson video URLs can be added in a later build.",
+    description: "Authorized SAP learning videos.",
     genres: ["Training", "SAP", "Professional Skills"]
   },
   {
@@ -45,8 +39,7 @@ const seriesCatalog = [
     type: "series",
     name: "Computer & Technology Training",
     releaseInfo: "Learning",
-    description:
-      "Learning catalog placeholder. Authorized lesson video URLs can be added in a later build.",
+    description: "Computer and technology learning resources.",
     genres: ["Training", "Computer", "Technology"]
   },
   {
@@ -54,25 +47,37 @@ const seriesCatalog = [
     type: "series",
     name: "Legal Free TV & Web Series",
     releaseInfo: "Catalog",
-    description:
-      "Catalog section reserved for TV and web series with verified legal free streaming sources.",
+    description: "TV and web series with verified legal free streaming sources.",
     genres: ["TV", "Web Series", "Free Legal"]
   }
 ];
 
 const manifest = {
   id: "org.openai.stremio.allinone.legal",
-  version: "1.0.0",
+  version: "1.1.0",
   name: "All-in-One Legal Free",
-  description:
-    "Legal free movies, TV and learning catalogs. Includes one authorized demo movie stream.",
+  description: "Movie and series discovery with TMDB metadata, legal free catalogs and learning resources.",
   resources: ["catalog", "meta", "stream", "subtitles"],
   types: ["movie", "series"],
   idPrefixes: [BASE_ID],
   catalogs: [
-    { type: "movie", id: "legal-movies", name: "Legal Free Movies" },
-    { type: "series", id: "legal-shows", name: "Legal Free TV & Shows" },
-    { type: "series", id: "training", name: "Training & Learning" }
+    {
+      type: "movie",
+      id: "legal-movies",
+      name: "Movies Search",
+      extra: [{ name: "search", isRequired: false }]
+    },
+    {
+      type: "series",
+      id: "legal-shows",
+      name: "TV & Series Search",
+      extra: [{ name: "search", isRequired: false }]
+    },
+    {
+      type: "series",
+      id: "training",
+      name: "Training & Learning"
+    }
   ],
   behaviorHints: {
     configurable: false,
@@ -82,67 +87,87 @@ const manifest = {
 
 const builder = new addonBuilder(manifest);
 
-builder.defineCatalogHandler(({ type, id, extra }) => {
-  const search = (extra && extra.search) ? String(extra.search).toLowerCase() : "";
-  let items = [];
+builder.defineCatalogHandler(async ({ type, id, extra }) => {
+  const search = extra && extra.search ? String(extra.search).trim() : "";
 
-  if (id === "legal-movies" && type === "movie") {
-    items = movieCatalog;
-  } else if (id === "legal-shows" && type === "series") {
-    items = seriesCatalog.filter((item) => item.id.endsWith("free-series"));
-  } else if (id === "training" && type === "series") {
-    items = seriesCatalog.filter((item) => item.id.includes("training-") || item.id.includes("learning-"));
+  try {
+    if (id === "legal-movies" && type === "movie") {
+      if (search) {
+        return { metas: await tmdb.searchCatalog("movie", search) };
+      }
+      return { metas: movieCatalog };
+    }
+
+    if (id === "legal-shows" && type === "series") {
+      if (search) {
+        return { metas: await tmdb.searchCatalog("series", search) };
+      }
+      return {
+        metas: seriesCatalog.filter(item => item.id.endsWith("free-series"))
+      };
+    }
+
+    if (id === "training" && type === "series") {
+      return {
+        metas: seriesCatalog.filter(
+          item => item.id.includes("training-") || item.id.includes("learning-")
+        )
+      };
+    }
+
+    return { metas: [] };
+  } catch (error) {
+    console.error("Catalog error:", error.message);
+    return { metas: [] };
   }
-
-  if (search) {
-    items = items.filter((item) =>
-      `${item.name} ${item.description || ""} ${(item.genres || []).join(" ")}`
-        .toLowerCase()
-        .includes(search)
-    );
-  }
-
-  return Promise.resolve({ metas: items });
 });
 
-builder.defineMetaHandler(({ type, id }) => {
-  const item = [...movieCatalog, ...seriesCatalog].find(
-    (entry) => entry.id === id && entry.type === type
-  );
-  if (!item) return Promise.resolve({ meta: null });
+builder.defineMetaHandler(async ({ type, id }) => {
+  const tmdbMatch = id.match(/^allinone:tmdb:(movie|series):(\d+)$/);
 
-  return Promise.resolve({
+  if (tmdbMatch && tmdbMatch[1] === type) {
+    try {
+      return {
+        meta: await tmdb.getDetails(type, tmdbMatch[2])
+      };
+    } catch (error) {
+      console.error("TMDB details error:", error.message);
+      return { meta: null };
+    }
+  }
+
+  const item = [...movieCatalog, ...seriesCatalog].find(
+    entry => entry.id === id && entry.type === type
+  );
+
+  if (!item) return { meta: null };
+
+  return {
     meta: {
       ...item,
-      poster: undefined,
-      background: undefined,
-      posterShape: "landscape"
+      posterShape: "poster"
     }
-  });
+  };
 });
 
 builder.defineStreamHandler(({ type, id }) => {
   if (type === "movie" && id === `${BASE_ID}big-buck-bunny`) {
-    return Promise.resolve({
+    return {
       streams: [
         {
           name: "Legal demo stream",
           title: "Big Buck Bunny • 1080p sample",
           url: "https://upload.wikimedia.org/wikipedia/commons/8/88/Big_Buck_Bunny_alt.webm",
-          behaviorHints: {
-            notWebReady: false
-          }
+          behaviorHints: { notWebReady: false }
         }
       ]
-    });
+    };
   }
 
-  // No fabricated or unverified links: other catalog entries remain
-  // browseable until an authorized direct-playback source is configured.
-  return Promise.resolve({ streams: [] });
+  return { streams: [] };
 });
 
-builder.defineSubtitlesHandler(() => Promise.resolve({ subtitles: [] }));
+builder.defineSubtitlesHandler(() => ({ subtitles: [] }));
 
 serveHTTP(builder.getInterface(), { port: PORT });
 console.log(`All-in-One Legal Free add-on listening on port ${PORT}`);

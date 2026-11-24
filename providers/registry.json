@@ -1,0 +1,39 @@
+{
+  "providers": [
+    {
+      "id": "youtube",
+      "name": "YouTube Official Channels",
+      "category": ["movies", "series", "training"],
+      "access": "free",
+      "playback": "official_external_or_authorized"
+    },
+    {
+      "id": "mxplayer",
+      "name": "MX Player",
+      "category": ["movies", "series"],
+      "access": "free_or_ad_supported",
+      "playback": "official_external_or_authorized"
+    },
+    {
+      "id": "waves",
+      "name": "WAVES",
+      "category": ["movies", "series"],
+      "access": "free_or_provider_dependent",
+      "playback": "official_external_or_authorized"
+    },
+    {
+      "id": "primevideo",
+      "name": "Prime Video",
+      "category": ["movies", "series"],
+      "access": "subscription",
+      "playback": "official_external_or_authorized"
+    },
+    {
+      "id": "netflix",
+      "name": "Netflix",
+      "category": ["movies", "series"],
+      "access": "subscription",
+      "playback": "official_external_or_authorized"
+    }
+  ]
+}

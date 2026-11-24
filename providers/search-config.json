@@ -1,0 +1,18 @@
+{
+  "metadataProvider": "tmdb",
+  "supportedLanguages": ["hi", "en", "ko", "zh", "ja"],
+  "supportedTypes": ["movie", "series"],
+  "categories": [
+    "Bollywood",
+    "Hollywood",
+    "Korean",
+    "Chinese",
+    "Japanese",
+    "Drama",
+    "Action",
+    "Thriller",
+    "Romance",
+    "Comedy"
+  ],
+  "apiKeyEnvironmentVariable": "aa1b73892681775e7907728e2ad0a237"
+}
